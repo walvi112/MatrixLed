@@ -4,9 +4,7 @@
 #include "stdint.h"
 #include "Arduino.h"
 
-#define CS_PIN    10
-#define MOSI_PIN  11
-#define SCLK_PIN  13
+
 
 #define OP_NOOP   0
 #define OP_DIGIT0 1
@@ -23,14 +21,42 @@
 #define OP_SHUTDOWN    12
 #define OP_DISPLAYTEST 15
 
-
+/* Send command to LED driver
+    addr: registrer address
+    value: value to send
+*/
 void SendCommand(uint8_t addr, uint8_t value);
-void ScreenStartUp(void);
+/* Start up the screen*/
+void ScreenStartUp(uint8_t mosi_pin, uint8_t sclk_pin, uint8_t cs_pin, uint8_t devices);
+/* Set the scan limit
+    limit: scan limit (0-7)
+*/
 void SetScanLimit(uint8_t limit);
+/* Set the scan intensity
+    limit: scan intensity (0-15)
+*/
 void SetScanIntensity(uint8_t intensity);
-void ClearScreen(void);
+/*Clear the display*/
+void ClearScreen(uint8_t direction = 0, unsigned long duration = 0);
+/*Shut down screen
+    command : (0, 1)
+*/
 void ShutDown(bool command);
-void SetRow(uint8_t row, bool state);
-void SetColumn(uint8_t col, bool state);
+/* Set row on/off
+ *  row: row to set value (1-8)
+ *  value: value to set (0-255)
+*/
+void SetRow(uint8_t row, uint8_t value);
+/* Set column on/off
+ *  column: column to set value (1-8)
+ *  value: value to set (0-255)
+*/
+void SetColumn(uint8_t col, uint8_t value);
+/* Set led on/off
+ *  row: row to set value (1-8)
+ *  column: column to set value (1-8)
+ *  state: state to set (0-1)
+*/
+void SetLED(uint8_t row, uint8_t col, bool state);
 
 #endif
