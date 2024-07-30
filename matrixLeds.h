@@ -20,11 +20,11 @@ const uint64_t IMAGES[] =
 
 const uint64_t IMAGES_REVERSE[] =
 {
-  0x0018244281996600, //Heart shape
-  0x3048442222444830,
-  0x0066998142241800,
-  0x0c1222444422120c,
+  0x00183c7effff6600, //Heart shape
   0x3c4299a581a5423c, //Smile
+  0x152a54a8a8542a15, //Arrow
+  0xffe7e7e7ff9999ff, //Creaper
+  
   
 };
 

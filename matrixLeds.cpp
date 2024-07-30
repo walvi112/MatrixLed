@@ -150,31 +150,26 @@ void SetLED(uint8_t row, uint8_t col, bool state, uint8_t device_id)
 
 void SetAnimation(uint64_t pattern, unsigned long duration)
 {
-  for (uint8_t i = 16; i > 0; i--) //set each col
+  uint8_t current_device = 1;
+  for (uint8_t  index = 0; index < 8 * MAX_DEVICE + 8; index++)
   {
-    for (uint8_t row = 1; row <= 8; row++) //set each row
+    for (uint8_t row = 1; row <= 8; row++)
     {
-      uint8_t this_row = (uint8_t) (pattern >> 8 * (row-1));
-      for (uint8_t device = 1; device <= MAX_DEVICE; device+=1)
-      {
-          if (i >= 8) 
-          {
-            if (device % 2 != 0)
-              SetRow(row, this_row >> (i - 8), device); //appear 8-0
-            else
-              SetRow(row, this_row << (16 - i), device);   //disappear
-          }
-          else 
-          {
-            if (device % 2 != 0)
-              SetRow(row, this_row << (8 - i), device); //disappear 1-7 
-            else
-              SetRow(row, this_row >> (i), device); //appear
-          }
-      }
+        uint8_t this_row = (uint8_t) (pattern >> 8 * (row-1));
+        if ((current_device - 1) != 0)
+        {
+          SetRow(row, this_row << (index%8) + 1, current_device - 1);
+        }
+        SetRow(row, this_row >> (7 - index % 8), current_device);    // 7-0    0 7  0 7 0 7 0 7 0 7       0index % 8 = 0 
+
     }
     delay(duration);
+    if (index % 8 == 7)
+    {
+        current_device += 1;
+    }
   }
+    
 }
 
 
