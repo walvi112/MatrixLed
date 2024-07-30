@@ -4,59 +4,80 @@
 #include "stdint.h"
 #include "Arduino.h"
 
+#ifndef MAX_DEVICE
+#define MAX_DEVICE 4
+#endif
 
+#define N_ROWS  8
+#define N_COLS  8
 
-#define OP_NOOP   0
-#define OP_DIGIT0 1
-#define OP_DIGIT1 2
-#define OP_DIGIT2 3
-#define OP_DIGIT3 4
-#define OP_DIGIT4 5
-#define OP_DIGIT5 6
-#define OP_DIGIT6 7
-#define OP_DIGIT7 8
-#define OP_DECODEMODE  9
-#define OP_INTENSITY   10
-#define OP_SCANLIMIT   11
-#define OP_SHUTDOWN    12
-#define OP_DISPLAYTEST 15
+const uint64_t IMAGES[] =
+{
+  0x0f0703010f070301, //on all LEDs
+  0x000081C3663C1800, //V shape
+  0x0066998142241800, //Heart shape
+};
 
+const uint64_t IMAGES_REVERSE[] =
+{
+  0x0018244281996600, //Heart shape
+  0x3048442222444830,
+  0x0066998142241800,
+  0x0c1222444422120c,
+  0x3c4299a581a5423c, //Smile
+  
+};
+
+void init_t();
 /* Send command to LED driver
     addr: registrer address
     value: value to send
+    device_id: id of led Matrix (1-4)
 */
-void SendCommand(uint8_t addr, uint8_t value);
+//void SendCommand(uint8_t addr, uint8_t value, uint8_t device_id);
 /* Start up the screen*/
-void ScreenStartUp(uint8_t mosi_pin, uint8_t sclk_pin, uint8_t cs_pin, uint8_t devices);
+void ScreenStartUp(uint8_t mosi_pin, uint8_t sclk_pin, uint8_t cs_pin);
 /* Set the scan limit
     limit: scan limit (0-7)
+    device_id: id of led Matrix (1-4)
 */
-void SetScanLimit(uint8_t limit);
+void SetScanLimit(uint8_t limit, uint8_t device_id);
 /* Set the scan intensity
     limit: scan intensity (0-15)
+    device_id: id of led Matrix (1-4)
 */
-void SetScanIntensity(uint8_t intensity);
-/*Clear the display*/
-void ClearScreen(uint8_t direction = 0, unsigned long duration = 0);
+void SetScanIntensity(uint8_t intensity, uint8_t device_id);
+/*Clear the display
+  direction: clear direction (0: bottom up, 1: up bottom, 2: left right, 3: right left)
+  duration: duration of delay between rows/columns
+  device_id: id of led Matrix (1-4)
+*/
+void ClearScreen(uint8_t device_id, uint8_t direction = 0, unsigned long duration = 0);
 /*Shut down screen
     command : (0, 1)
+    device_id: id of led Matrix (1-4)
 */
-void ShutDown(bool command);
+void ShutDown(bool command, uint8_t device_id);
 /* Set row on/off
  *  row: row to set value (1-8)
- *  value: value to set (0-255)
+ *  value: value to set (0-255)+
+ *  device_id: device id to control (1-4)
 */
-void SetRow(uint8_t row, uint8_t value);
+void SetRow(uint8_t row, uint8_t value, uint8_t device_id);
 /* Set column on/off
  *  column: column to set value (1-8)
  *  value: value to set (0-255)
+ *  device_id: device id to control (1-4)
 */
-void SetColumn(uint8_t col, uint8_t value);
+void SetColumn(uint8_t col, uint8_t value, uint8_t device_id);
 /* Set led on/off
  *  row: row to set value (1-8)
  *  column: column to set value (1-8)
  *  state: state to set (0-1)
+ *  device_id: id of led Matrix (1-4)
 */
-void SetLED(uint8_t row, uint8_t col, bool state);
+void SetLED(uint8_t row, uint8_t col, bool state, uint8_t device_id);
+
+void SetAnimation(uint64_t pattern, unsigned long duration);
 
 #endif

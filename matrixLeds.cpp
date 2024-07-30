@@ -1,165 +1,227 @@
 #include "matrixLeds.h"
 
-uint8_t row_value[8] = {0};
+#define ROW_VALUE_INDEX  ((row-1) + 8 * (device_id - 1))
+
+uint8_t row_value[8 * MAX_DEVICE] = {0};
 uint8_t SCLK_PIN, MOSI_PIN, CS_PIN, DEVICES;
 
+#define OP_NOOP   0
+#define OP_DIGIT0 1
+#define OP_DIGIT1 2
+#define OP_DIGIT2 3
+#define OP_DIGIT3 4
+#define OP_DIGIT4 5
+#define OP_DIGIT5 6
+#define OP_DIGIT6 7
+#define OP_DIGIT7 8
+#define OP_DECODEMODE  9
+#define OP_INTENSITY   10
+#define OP_SCANLIMIT   11
+#define OP_SHUTDOWN    12
+#define OP_DISPLAYTEST 15
 
-void SendCommand(uint8_t addr, uint8_t value)
+void init_t()
 {
+  Serial.begin(9600);
+}
+
+void SendCommand(uint8_t addr, uint8_t value, uint8_t device_id)
+{
+//  uint8_t data[MAX_DEVICE * 2] = {0};
+//  data[device_id + 1] = addr;
+//  data[device_id] = value;
   
+  digitalWrite(SCLK_PIN, LOW);
   digitalWrite(CS_PIN, LOW);
-  for (int i = 1; i <= 4; i++)
+  
+  for (int i = MAX_DEVICE; i > 0; i--)
   {
-  shiftOut(MOSI_PIN, SCLK_PIN, MSBFIRST, addr);
-  shiftOut(MOSI_PIN, SCLK_PIN, MSBFIRST, value);
+    if (i == device_id)
+    {
+       shiftOut(MOSI_PIN, SCLK_PIN, MSBFIRST, addr);
+       shiftOut(MOSI_PIN, SCLK_PIN, MSBFIRST, value);
+    }
+    else
+    {
+       shiftOut(MOSI_PIN, SCLK_PIN, MSBFIRST, 0);
+       shiftOut(MOSI_PIN, SCLK_PIN, MSBFIRST, 0);
+    }
   }
-
-
   digitalWrite(CS_PIN, HIGH);
 }
 
 
-void SetScanLimit(uint8_t limit)
+void SetScanLimit(uint8_t limit, uint8_t device_id)
 {
   if (limit >= 0 && limit <= 7)
-    SendCommand(OP_SCANLIMIT, limit);
+    SendCommand(OP_SCANLIMIT, limit, device_id);
 }
 
-void SetScanIntensity(uint8_t intensity)
+void SetScanIntensity(uint8_t intensity, uint8_t device_id)
 {
   if (intensity >= 0 && intensity <= 15)
-    SendCommand(OP_INTENSITY, intensity);
+    SendCommand(OP_INTENSITY, intensity, device_id);
 }
 
-void ClearScreen(uint8_t direction = 0, unsigned long duration = 0)
+void ClearScreen(uint8_t device_id, uint8_t direction = 0, unsigned long duration = 0)
 {
-  if (!direction)
-    for(uint8_t addr = 1; addr <= 8; addr++)
+    for(uint8_t addr = 1; addr <= N_ROWS; addr++)
     {
-      row_value[addr-1] = 0;
-      SendCommand(addr, row_value[addr-1]);    
+      if (direction == 0)
+      {
+        SetRow(addr, 0, device_id);  
+      }
+      else if (direction == 1)
+      {
+        SetRow(9 - addr, 0, device_id);
+      }
+      else if (direction == 2)
+      {
+        SetColumn(addr, 0, device_id);
+      } 
+      else if (direction == 3)
+      {
+        SetColumn(9 - addr, 0, device_id);
+      } 
+      delay(duration);   
     }
-   else if (direction == 1)
-   {
-    for(uint8_t addr = 1; addr <= 8; addr++)
-    {
-      row_value[addr-1] = 0;
-      SendCommand(addr, row_value[addr-1]);
-      delay(duration);    
-    }
-   }
-   else if (direction == 2)
-   {
-    for(uint8_t addr = 8; addr >= 1; addr--)
-    {
-      row_value[addr-1] = 0;
-      SendCommand(addr, row_value[addr-1]);
-      delay(duration);    
-    }
-   }
 }
 
-void ShutDown(bool command)
+void ShutDown(bool command, uint8_t device_id)
 {
   if (command)
   {
-    SendCommand(OP_SHUTDOWN, 0);
+    SendCommand(OP_SHUTDOWN, 0, device_id);
   }
   else
   {
-    SendCommand(OP_SHUTDOWN, 1);
+    SendCommand(OP_SHUTDOWN, 1, device_id);
   }
 }
 
-void SetDecodeMode(uint8_t code)
+void SetDecodeMode(uint8_t code, uint8_t device_id)
 {
-   SendCommand(OP_NOOP, code);
+   SendCommand(OP_NOOP, code, device_id);
 }
 
-void SetRow(uint8_t row, uint8_t value)
+void SetRow(uint8_t row, uint8_t value, uint8_t device_id)
 {
-  if ( row >=1 && row <=8 && value >= 0 && value <= 255)
+  if ((row >=1 && row <=N_ROWS) & (value >= 0 & value <= 255) & (device_id >= 1 && device_id <= MAX_DEVICE))
   {
-    row_value[row-1] = value;
-    SendCommand(row, row_value[row-1]);
+    row_value[ROW_VALUE_INDEX] = value;
+    SendCommand(row, row_value[ROW_VALUE_INDEX], device_id);
   }
 }
 
-void SetColumn(uint8_t col, uint8_t value)
+void SetColumn(uint8_t col, uint8_t value, uint8_t device_id)
 {
-  if (col >=1 && col <=8 && value >= 0 && value <= 255)
+  if ((col >=1 && col <=N_COLS) & (value >= 0 && value <= 255) & (device_id >= 1 && device_id <= MAX_DEVICE))
   {
       for (uint8_t row = 1; row <= 8; row++)
       {
         if (value>>(row-1) & 1) 
         {
-          row_value[row-1] |= (1<< (col - 1)); 
+          row_value[ROW_VALUE_INDEX] |= (1<< (col - 1)); 
         }
         else
         {
-          row_value[row-1] &= ~(1<< (col - 1)); 
+          row_value[ROW_VALUE_INDEX] &= ~(1<< (col - 1)); 
         }
-        SendCommand(row, row_value[row - 1]);
+        SendCommand(row, row_value[ROW_VALUE_INDEX], device_id);
       }
   }
 }
 
-void SetLED(uint8_t row, uint8_t col, bool state)
+void SetLED(uint8_t row, uint8_t col, bool state, uint8_t device_id)
 {
-  if (col >= 1 && col <= 8 && row >=1 && row <=8)
+  if ((col >= 1 && col <= N_COLS) & (row >=1 && row <=N_ROWS))
   {
     if (state)    
     {
-      row_value[row - 1] |= (1<< (col - 1));
+      row_value[ROW_VALUE_INDEX] |= (1<< (col - 1));
     }
     else
     {
-      row_value[row - 1] &= ~(1<< (col - 1)); 
+      row_value[ROW_VALUE_INDEX] &= ~(1<< (col - 1)); 
     }
-    SendCommand(row, row_value[row-1]);
+    SendCommand(row, row_value[ROW_VALUE_INDEX], device_id);
   }
 }
 
-
-void Welcome(void)
+void SetAnimation(uint64_t pattern, unsigned long duration)
 {
-  ShutDown(0);
-  for(int i = 4; i >= 0; i--)
+  for (uint8_t i = 16; i > 0; i--) //set each col
   {
-    SetRow(i, 255); 
-    SetRow(9 - i, 255); 
-    delay(100);
-    SetRow(i, 0); 
-    SetRow(9 - i, 0); 
+    for (uint8_t row = 1; row <= 8; row++) //set each row
+    {
+      uint8_t this_row = (uint8_t) (pattern >> 8 * (row-1));
+      for (uint8_t device = 1; device <= MAX_DEVICE; device+=1)
+      {
+          if (i >= 8) 
+          {
+            if (device % 2 != 0)
+              SetRow(row, this_row >> (i - 8), device); //appear 8-0
+            else
+              SetRow(row, this_row << (16 - i), device);   //disappear
+          }
+          else 
+          {
+            if (device % 2 != 0)
+              SetRow(row, this_row << (8 - i), device); //disappear 1-7 
+            else
+              SetRow(row, this_row >> (i), device); //appear
+          }
+      }
+    }
+    delay(duration);
   }
-
-  for(int i = 4; i >= 0; i--)
-  {
-    SetColumn(i, 255); 
-    SetColumn(9 - i, 255); 
-    delay(100);
-    SetColumn(i, 0); 
-    SetColumn(9 - i, 0); 
-  }
-  ClearScreen();
 }
 
-void ScreenStartUp(uint8_t mosi_pin, uint8_t sclk_pin, uint8_t cs_pin, uint8_t devices)
+
+void Welcome(uint8_t device_id)
+{
+  ShutDown(0, device_id);
+  for (uint8_t i = MAX_DEVICE; i >= 1; i--)
+  {
+    SetRow(i, 255, device_id); 
+    SetRow(9 - i, 255, device_id); 
+    delay(50);
+    SetRow(i, 0, device_id); 
+    SetRow(9 - i, 0, device_id);
+  }
+ 
+  for (uint8_t i = MAX_DEVICE; i >= 1; i--)
+  {
+    SetColumn(i, 255, device_id); 
+    SetColumn(9 - i, 255, device_id); 
+    delay(50);
+    SetColumn(i, 0, device_id); 
+    SetColumn(9 - i, 0, device_id); 
+  }
+
+  ClearScreen(device_id);
+}
+
+void ScreenStartUp(uint8_t mosi_pin, uint8_t sclk_pin, uint8_t cs_pin)
 {
   MOSI_PIN = mosi_pin; 
   SCLK_PIN = sclk_pin;
   CS_PIN = cs_pin;
-  DEVICES = devices;
   
   pinMode(CS_PIN, OUTPUT);
   pinMode(MOSI_PIN, OUTPUT);
   pinMode(SCLK_PIN, OUTPUT);
   digitalWrite(CS_PIN, HIGH);
-  SendCommand(OP_DISPLAYTEST, 0);
-  SetScanLimit(7);
-  SetScanIntensity(4);
-  SetDecodeMode(0);
-  ClearScreen();
-  ShutDown(1);
-  Welcome();
+
+  for (int device_id = 1; device_id <= MAX_DEVICE; device_id ++)
+  {
+    SendCommand(OP_DISPLAYTEST, 0, device_id);
+    SetScanLimit(7,device_id);
+    SetScanIntensity(4, device_id);
+    SetDecodeMode(0, device_id);
+    ClearScreen(device_id);
+    ShutDown(1, device_id);
+    Welcome(device_id);
+  }
+
 }
