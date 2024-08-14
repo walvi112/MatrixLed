@@ -28,9 +28,9 @@ void setup() {
 }
 
 void loop() {
-  if (image >= 4)
+  if (image >= 6)
     image = 0;
-  SetAnimation(IMAGES_REVERSE[image++], 30);
+  SetAnimation(IMAGES_REVERSE[image++], 10);
 
  
   

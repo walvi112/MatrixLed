@@ -8,7 +8,7 @@
 #define MAX_DEVICE 4
 #endif
 
-#define N_ROWS  8
+#define N_ROWS  8 
 #define N_COLS  8
 
 const uint64_t IMAGES[] =
@@ -22,8 +22,11 @@ const uint64_t IMAGES_REVERSE[] =
 {
   0x00183c7effff6600, //Heart shape
   0x3c4299a581a5423c, //Smile
-  0x152a54a8a8542a15, //Arrow
+  0x1f3e7cf8f87c3e1f, //Arrow
   0xffe7e7e7ff9999ff, //Creaper
+  0x815a24ffdb7e3c18, //Squirt
+  0x557f7f7f49493e1c, //Pacman
+  
   
   
 };

@@ -160,7 +160,7 @@ void SetAnimation(uint64_t pattern, unsigned long duration)
         {
           SetRow(row, this_row << (index%8) + 1, current_device - 1);
         }
-        SetRow(row, this_row >> (7 - index % 8), current_device);    // 7-0    0 7  0 7 0 7 0 7 0 7       0index % 8 = 0 
+        SetRow(row, this_row >> (7 - index % 8), current_device);   
 
     }
     delay(duration);
@@ -212,7 +212,7 @@ void ScreenStartUp(uint8_t mosi_pin, uint8_t sclk_pin, uint8_t cs_pin)
   {
     SendCommand(OP_DISPLAYTEST, 0, device_id);
     SetScanLimit(7,device_id);
-    SetScanIntensity(4, device_id);
+    SetScanIntensity(2, device_id);
     SetDecodeMode(0, device_id);
     ClearScreen(device_id);
     ShutDown(1, device_id);
