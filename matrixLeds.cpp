@@ -2,9 +2,6 @@
 
 #define ROW_VALUE_INDEX  ((row-1) + 8 * (device_id - 1))
 
-uint8_t row_value[8 * MAX_DEVICE] = {0};
-uint8_t SCLK_PIN, MOSI_PIN, CS_PIN, DEVICES;
-
 #define OP_NOOP   0
 #define OP_DIGIT0 1
 #define OP_DIGIT1 2
@@ -19,6 +16,13 @@ uint8_t SCLK_PIN, MOSI_PIN, CS_PIN, DEVICES;
 #define OP_SCANLIMIT   11
 #define OP_SHUTDOWN    12
 #define OP_DISPLAYTEST 15
+
+uint8_t row_value[8 * MAX_DEVICE] = {0};
+uint8_t device_to_refresh[MAX_DEVICE] = {0};
+
+
+uint8_t SCLK_PIN, MOSI_PIN, CS_PIN, DEVICES;
+
 
 void init_t()
 {
@@ -50,6 +54,37 @@ void SendCommand(uint8_t addr, uint8_t value, uint8_t device_id)
   digitalWrite(CS_PIN, HIGH);
 }
 
+uint8_t getDeviceidfromCol(uint8_t col)
+{
+  if (col <= N_COLS)
+  {
+    return 1;
+  }
+  else if (col <= N_COLS * 2)
+  {
+    return 2;
+  }
+  else if (col <= N_COLS * 3)
+  {
+    return 3;
+  }
+  else if (col <= N_COLS * 4)
+  {
+    return 4;
+  }
+}
+
+void device_refresh()
+{
+  for (uint8_t device_id = 1; device_id <= MAX_DEVICE; device_id++)
+  {
+    if (device_to_refresh[device_id - 1] == 1)
+      for (int row = 1; row <= N_ROWS; row++)
+      {
+          SendCommand(row, row_value[ROW_VALUE_INDEX], device_id);
+      }
+  }
+}
 
 void SetScanLimit(uint8_t limit, uint8_t device_id)
 {
@@ -151,20 +186,20 @@ void SetLED(uint8_t row, uint8_t col, bool state, uint8_t device_id)
 void SetAnimation(uint64_t pattern, unsigned long duration)
 {
   uint8_t current_device = 1;
-  for (uint8_t  index = 0; index < 8 * MAX_DEVICE + 8; index++)
+  for (uint8_t  index = 0; index < N_COLS * MAX_DEVICE + N_COLS; index++)
   {
-    for (uint8_t row = 1; row <= 8; row++)
+    for (uint8_t row = 1; row <= N_COLS; row++)
     {
-        uint8_t this_row = (uint8_t) (pattern >> 8 * (row-1));
+        uint8_t this_row = (uint8_t) (pattern >> N_COLS * (row-1));
         if ((current_device - 1) != 0)
         {
-          SetRow(row, this_row << (index%8) + 1, current_device - 1);
+          SetRow(row, this_row << (index % N_COLS) + 1, current_device - 1);
         }
-        SetRow(row, this_row >> (7 - index % 8), current_device);   
+        SetRow(row, this_row >> (7 - index % N_COLS), current_device);   
 
     }
     delay(duration);
-    if (index % 8 == 7)
+    if (index % N_COLS == 7)
     {
         current_device += 1;
     }
@@ -172,26 +207,115 @@ void SetAnimation(uint64_t pattern, unsigned long duration)
     
 }
 
+void ModArray_SetColumnbyIndex(uint8_t col, uint8_t value)
+{
+    uint8_t device_id = getDeviceidfromCol(col);
+    col = (col - 1) % N_COLS + 1;
+    for (uint8_t row = 1; row <= N_ROWS; row++)
+    {
+      if (value>>(row-1) & 1) 
+      {
+        row_value[ROW_VALUE_INDEX] |= (1<< (col - 1));  
+      }
+      else
+      {
+        row_value[ROW_VALUE_INDEX] &= ~(1<< (col - 1)); 
+      }
+    }      
+}
+
+void SetColumnbyIndex(uint8_t col, uint8_t value)
+{
+  if ((col >=1 && col <=T_COLS) & (value >= SHUTDOWN_VAL && value <= ON_VAL))
+  {
+      uint8_t device_id = getDeviceidfromCol(col);
+      col = (col - 1) % N_COLS + 1;
+      for (uint8_t row = 1; row <= N_ROWS; row++)
+      {
+        if (value>>(row-1) & 1) 
+        {
+          row_value[ROW_VALUE_INDEX] |= (1<< (col - 1));  
+        }
+        else
+        {
+          row_value[ROW_VALUE_INDEX] &= ~(1<< (col - 1)); 
+        }
+
+        SendCommand(row, row_value[ROW_VALUE_INDEX], device_id);
+      }
+  }
+}
+
+void SetLEDbyIndex(uint8_t row, uint8_t col, bool state)
+{
+  if ((col >= 1 && col <= T_COLS) & (row >=1 && row <=N_ROWS))
+  {
+    uint8_t device_id = getDeviceidfromCol(col);
+    col = (col - 1) % N_COLS + 1;
+    
+    if (state)    
+    {
+      row_value[ROW_VALUE_INDEX] |= (1<< (col - 1));
+    }
+    else
+    {
+      row_value[ROW_VALUE_INDEX] &= ~(1<< (col - 1)); 
+    }
+    SendCommand(row, row_value[ROW_VALUE_INDEX], device_id);
+  }
+}
+
+void SetAnimationbyFrame(uint8_t num_frames, uint8_t frame_length , void *frames , unsigned long duration)
+{
+  uint8_t current_index = 1;
+  uint8_t current_frame = 0;
+  uint8_t (*frame)[frame_length] = (uint8_t (*)[frame_length]) frames;
+  int8_t ref_col = -frame_length + 1; 
+  while(ref_col <= T_COLS)
+  {
+    
+    //delete previous graphic
+    for (uint8_t pixel_col = 0; pixel_col < frame_length; pixel_col++)
+    {
+      ModArray_SetColumnbyIndex(ref_col + pixel_col, SHUTDOWN_VAL);
+      device_to_refresh[getDeviceidfromCol(ref_col + pixel_col) - 1] = 1;
+    }
+    //shift reference column and set net graphic
+    ref_col++;
+    for (uint8_t pixel_col = 0; pixel_col < frame_length; pixel_col++)
+    {
+      ModArray_SetColumnbyIndex(ref_col + pixel_col, frame[current_frame][pixel_col]);
+      device_to_refresh[getDeviceidfromCol(ref_col + pixel_col) - 1] = 1;
+    }
+    device_refresh();
+    delay(duration);
+    current_frame++;
+    if (current_frame >= num_frames)
+      current_frame = 0;
+  } 
+}
+
+
 
 void Welcome(uint8_t device_id)
 {
   ShutDown(0, device_id);
   for (uint8_t i = MAX_DEVICE; i >= 1; i--)
   {
-    SetRow(i, 255, device_id); 
-    SetRow(9 - i, 255, device_id); 
+    SetRow(i, ON_VAL, device_id); 
+    SetRow(9 - i, ON_VAL, device_id); 
     delay(50);
-    SetRow(i, 0, device_id); 
-    SetRow(9 - i, 0, device_id);
+    SetRow(i, SHUTDOWN_VAL, device_id); 
+    SetRow(9 - i, SHUTDOWN_VAL, device_id);
   }
  
   for (uint8_t i = MAX_DEVICE; i >= 1; i--)
   {
-    SetColumn(i, 255, device_id); 
-    SetColumn(9 - i, 255, device_id); 
+    SetColumn(i, ON_VAL, device_id); 
+    SetColumn(9 - i, ON_VAL, device_id); 
     delay(50);
-    SetColumn(i, 0, device_id); 
-    SetColumn(9 - i, 0, device_id); 
+    SetColumn(i, SHUTDOWN_VAL, device_id); 
+    SetColumn(9 - i, SHUTDOWN_VAL, device_id); 
   }
 
   ClearScreen(device_id);
