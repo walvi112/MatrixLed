@@ -16,7 +16,6 @@ void setup() {
 }
 
 void loop() {
-  //AnimateText("Bonjour la FRANCE", 1, 100);
-  SetAnimationbyFrame(3, 18 , PACMAN , 100, D_LEFT);
+  // SetAnimationbyFrame(4, 18 , PACMAN , 100, D_RIGHT);
   
 }

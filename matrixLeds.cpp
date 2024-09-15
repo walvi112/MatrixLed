@@ -274,7 +274,7 @@ void SetLEDbyIndex(uint8_t row, uint8_t col, bool state)
 
 void SetAnimationbyFrame(uint8_t num_frames, uint8_t frame_length , void *frames , unsigned long duration, enum Direction direction)
 {
-  int ref_col;
+  int ref_col, des_col, sign_dir;
   switch (direction)
   {
     case D_TOP:
@@ -283,17 +283,21 @@ void SetAnimationbyFrame(uint8_t num_frames, uint8_t frame_length , void *frames
       return;
     case D_LEFT:
       ref_col = -frame_length + 1;
+      des_col = T_COLS;
+      sign_dir = 1;
       break;
     case D_RIGHT:
       ref_col = T_COLS;
+      des_col = -frame_length + 1;;
+      sign_dir = -1;
       break;
   }
 
-  uint8_t current_index = 1;
+  // uint8_t current_index = 1;
   uint8_t current_frame = 0;
   uint8_t (*frame)[frame_length] = (uint8_t (*)[frame_length]) frames;
 
-  while(ref_col <= T_COLS)
+  while(sign_dir * ref_col <= sign_dir * des_col)
   {
     int current_col;
     //delete previous graphic
@@ -307,13 +311,14 @@ void SetAnimationbyFrame(uint8_t num_frames, uint8_t frame_length , void *frames
       }
     }
     //shift reference column and set net graphic
-    ref_col++;
+    // ref_col++;
+    ref_col += sign_dir;
     for (uint8_t pixel_col = 0; pixel_col < frame_length; pixel_col++)
     {
       current_col = ref_col + pixel_col;
       if (current_col >= 1 && current_col <= T_COLS)
       {
-          ModArray_SetColumnbyIndex(ref_col + pixel_col, frame[current_frame][pixel_col]);
+          ModArray_SetColumnbyIndex(current_col, frame[current_frame][pixel_col]);
           device_to_refresh[getDeviceidfromCol(current_col) - 1] = 1;
       }
     }
