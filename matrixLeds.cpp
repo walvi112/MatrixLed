@@ -24,7 +24,7 @@ uint8_t device_to_refresh[MAX_DEVICE] = {0};
 uint8_t SCLK_PIN, MOSI_PIN, CS_PIN, DEVICES;
 
 
-void init_t()
+void InitSerial()
 {
   Serial.begin(9600);
 }
@@ -54,23 +54,26 @@ void SendCommand(uint8_t addr, uint8_t value, uint8_t device_id)
   digitalWrite(CS_PIN, HIGH);
 }
 
-uint8_t getDeviceidfromCol(uint8_t col)
+uint8_t getDeviceidfromCol(int col)
 {
-  if (col <= N_COLS)
+  if (col >= 1 && col <= T_COLS)
   {
-    return 1;
-  }
-  else if (col <= N_COLS * 2)
-  {
-    return 2;
-  }
-  else if (col <= N_COLS * 3)
-  {
-    return 3;
-  }
-  else if (col <= N_COLS * 4)
-  {
-    return 4;
+      if (col <= N_COLS)
+      {
+        return 1;
+      }
+      else if (col <= N_COLS * 2)
+      {
+        return 2;
+      }
+      else if (col <= N_COLS * 3)
+      {
+        return 3;
+      }
+      else if (col <= N_COLS * 4)
+      {
+        return 4;
+      }
   }
 }
 
@@ -79,6 +82,7 @@ void device_refresh()
   for (uint8_t device_id = 1; device_id <= MAX_DEVICE; device_id++)
   {
     if (device_to_refresh[device_id - 1] == 1)
+      device_to_refresh[device_id - 1] = 0;
       for (int row = 1; row <= N_ROWS; row++)
       {
           SendCommand(row, row_value[ROW_VALUE_INDEX], device_id);
@@ -98,23 +102,23 @@ void SetScanIntensity(uint8_t intensity, uint8_t device_id)
     SendCommand(OP_INTENSITY, intensity, device_id);
 }
 
-void ClearScreen(uint8_t device_id, uint8_t direction = 0, unsigned long duration = 0)
+void ClearScreen(uint8_t device_id, enum Direction direction = D_BOT, unsigned long duration = 0)
 {
     for(uint8_t addr = 1; addr <= N_ROWS; addr++)
     {
-      if (direction == 0)
+      if (direction == D_BOT)
       {
         SetRow(addr, 0, device_id);  
       }
-      else if (direction == 1)
+      else if (direction == D_TOP)
       {
         SetRow(9 - addr, 0, device_id);
       }
-      else if (direction == 2)
+      else if (direction == D_LEFT)
       {
         SetColumn(addr, 0, device_id);
       } 
-      else if (direction == 3)
+      else if (direction == D_RIGHT)
       {
         SetColumn(9 - addr, 0, device_id);
       } 
@@ -207,8 +211,10 @@ void SetAnimation(uint64_t pattern, unsigned long duration)
     
 }
 
-void ModArray_SetColumnbyIndex(uint8_t col, uint8_t value)
+static void ModArray_SetColumnbyIndex(int col, uint8_t value)
 {
+  if ( col >= 1 && col <= T_COLS)
+  {
     uint8_t device_id = getDeviceidfromCol(col);
     col = (col - 1) % N_COLS + 1;
     for (uint8_t row = 1; row <= N_ROWS; row++)
@@ -221,7 +227,8 @@ void ModArray_SetColumnbyIndex(uint8_t col, uint8_t value)
       {
         row_value[ROW_VALUE_INDEX] &= ~(1<< (col - 1)); 
       }
-    }      
+    } 
+  }   
 }
 
 void SetColumnbyIndex(uint8_t col, uint8_t value)
@@ -265,27 +272,50 @@ void SetLEDbyIndex(uint8_t row, uint8_t col, bool state)
   }
 }
 
-void SetAnimationbyFrame(uint8_t num_frames, uint8_t frame_length , void *frames , unsigned long duration)
+void SetAnimationbyFrame(uint8_t num_frames, uint8_t frame_length , void *frames , unsigned long duration, enum Direction direction)
 {
+  int ref_col;
+  switch (direction)
+  {
+    case D_TOP:
+      return;
+    case D_BOT:
+      return;
+    case D_LEFT:
+      ref_col = -frame_length + 1;
+      break;
+    case D_RIGHT:
+      ref_col = T_COLS;
+      break;
+  }
+
   uint8_t current_index = 1;
   uint8_t current_frame = 0;
   uint8_t (*frame)[frame_length] = (uint8_t (*)[frame_length]) frames;
-  int8_t ref_col = -frame_length + 1; 
+
   while(ref_col <= T_COLS)
   {
-    
+    int current_col;
     //delete previous graphic
     for (uint8_t pixel_col = 0; pixel_col < frame_length; pixel_col++)
     {
-      ModArray_SetColumnbyIndex(ref_col + pixel_col, SHUTDOWN_VAL);
-      device_to_refresh[getDeviceidfromCol(ref_col + pixel_col) - 1] = 1;
+      current_col = ref_col + pixel_col;
+      if ( current_col >= 1 && current_col <= T_COLS)
+      {
+          ModArray_SetColumnbyIndex(current_col, SHUTDOWN_VAL);
+          device_to_refresh[getDeviceidfromCol(current_col) - 1] = 1;
+      }
     }
     //shift reference column and set net graphic
     ref_col++;
     for (uint8_t pixel_col = 0; pixel_col < frame_length; pixel_col++)
     {
-      ModArray_SetColumnbyIndex(ref_col + pixel_col, frame[current_frame][pixel_col]);
-      device_to_refresh[getDeviceidfromCol(ref_col + pixel_col) - 1] = 1;
+      current_col = ref_col + pixel_col;
+      if (current_col >= 1 && current_col <= T_COLS)
+      {
+          ModArray_SetColumnbyIndex(ref_col + pixel_col, frame[current_frame][pixel_col]);
+          device_to_refresh[getDeviceidfromCol(current_col) - 1] = 1;
+      }
     }
     device_refresh();
     delay(duration);
@@ -326,7 +356,7 @@ void ScreenStartUp(uint8_t mosi_pin, uint8_t sclk_pin, uint8_t cs_pin)
   MOSI_PIN = mosi_pin; 
   SCLK_PIN = sclk_pin;
   CS_PIN = cs_pin;
-  
+
   pinMode(CS_PIN, OUTPUT);
   pinMode(MOSI_PIN, OUTPUT);
   pinMode(SCLK_PIN, OUTPUT);

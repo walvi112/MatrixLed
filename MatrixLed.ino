@@ -6,14 +6,17 @@
 #define SCLK_PIN  13
 #define MAX_DEVICE 4
 
+
 void setup() {
-  init_t();
   ScreenStartUp(MOSI_PIN, SCLK_PIN, CS_PIN);
-  //SetLEDbyIndex(5, 1, 1);
-   //SetAnimationbyFrame(IMAGES_REVERSE, 1, 500);
+  //SetLEDbyIndex(5, 2, 1);
   
+
+
 }
 
 void loop() {
-  SetAnimationbyFrame(4, 18, PACMAN , 30);
+  //AnimateText("Bonjour la FRANCE", 1, 100);
+  SetAnimationbyFrame(3, 18 , PACMAN , 100, D_LEFT);
+  
 }
