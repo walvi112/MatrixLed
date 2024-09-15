@@ -1,8 +1,7 @@
 #ifndef MATRIXLEDS_H
 #define MATRIXLEDS_H
 
-#include "stdint.h"
-#include "Arduino.h"
+#include <Arduino.h>
 
 #ifndef MAX_DEVICE
 #define MAX_DEVICE 4
